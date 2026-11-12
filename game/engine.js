@@ -7,7 +7,7 @@
 })(typeof self !== 'undefined' ? self : this, function (D) {
   'use strict';
 
-  const VERSION = 1;
+  const VERSION = 2;
   const ORDER_ENERGY = 10;
   const DISPUTE_ENERGY = 5;
   const ORDER_STRESS = 4;
@@ -40,7 +40,7 @@
       trust: {}, team: [], upgrades: {}, flags: {},
       market: { mid: MID_BASE, hist: [] },
       orders: [], hustles: [], nextId: 1,
-      pendingFraud: [],
+      pendingFraud: [], deals: [],
       chat: [], pending: [], doneEvents: {},
       turnover: 0, profit: 0, taxOn: false, taxReserve: 0, taxDebt: 0, taxPaid: 0, fees: 0,
       sbpUsed: 0, buffs: [], retailDay: 0,
@@ -174,15 +174,16 @@
     const client = person(s);
     const o = {
       id: s.nextId++, side, qty, price, total, fraud, vip,
-      client: { name: short(client), rating: (fraud ? 4.3 + rnd(s) * 0.7 : 4.6 + rnd(s) * 0.4).toFixed(1), deals: fraud && rnd(s) < 0.5 ? Math.floor(rnd(s) * 12) : 20 + Math.floor(rnd(s) * 900) },
+      client: { name: short(client), full: full(client), rating: (fraud ? 4.3 + rnd(s) * 0.7 : 4.6 + rnd(s) * 0.4).toFixed(1), deals: fraud && rnd(s) < 0.5 ? Math.floor(rnd(s) * 12) : 20 + Math.floor(rnd(s) * 900) },
       note: null,
     };
     if (side === 'sell') {
       let amount = total;
       if (fraud === 'under') amount = r2(total * (1 - (0.02 + rnd(s) * 0.08)));
       o.pay = { from: fraud === 'third' ? full(otherPerson(s, client)) : full(client), amount, source: fraud === 'fake' ? 'screenshot' : 'bank', bank: pick(s, D.banks) };
+      o.pay.to = has(s, 'bank2') && rnd(s) < 0.5 ? 'green' : 'yellow';
     } else {
-      o.card = { holder: fraud === 'drop' ? full(otherPerson(s, client)) : full(client), bank: pick(s, D.banks) };
+      o.card = { holder: fraud === 'drop' ? full(otherPerson(s, client)) : full(client), bank: pick(s, D.banks), num: '2200 •••• ' + String(1000 + Math.floor(rnd(s) * 9000)) };
     }
     const r = rnd(s);
     if (fraud === 'third' && r < 0.35) o.note = pick(s, D.notes.third);
@@ -197,8 +198,8 @@
     const mid = s.market.mid, qty = 74, price = r2(mid + 1);
     const p = person(s);
     const o = { id: s.nextId++, side: 'sell', qty, price, total: r2(qty * price), fraud: null, tutorial: true,
-      client: { name: short(p), rating: '5.0', deals: 312 }, note: 'Саня сказал, ты новенький. Оплатил, проверяй 🙂' };
-    o.pay = { from: full(p), amount: o.total, source: 'bank', bank: 'Т-Банк' };
+      client: { name: short(p), full: full(p), rating: '5.0', deals: 312 }, note: 'Саня сказал, ты новенький. Оплатил, проверяй 🙂' };
+    o.pay = { from: full(p), amount: o.total, source: 'bank', bank: 'Т-Банк', to: 'yellow' };
     o.est = estimate(s, o);
     return o;
   }
@@ -283,6 +284,8 @@
     s.stress = clamp(s.stress + ORDER_STRESS, 0, 100);
     s.turnover += o.total; s.today.turnover += o.total; s.today.orders++;
     s.stats.ordersDone++;
+    s.deals.unshift({ id: o.id, day: s.day, side: o.side, qty: o.qty, price: o.price, total: o.total, client: o.client.full || o.client.name });
+    if (s.deals.length > 80) s.deals.length = 80;
     addRisk(s, 2 + 4 * Math.min(1.5, o.total / Math.max(nw0, 1)));
     let msg = o.side === 'sell' ? `Отпустил ${fmt(o.qty)} USDT` : `Оплатил и получил ${fmt(o.qty)} USDT`;
     const fx = { kind: 'deal', profit: 0 };
@@ -319,6 +322,15 @@
     s.stats.wrongDisputes++;
     s.stress = clamp(s.stress + 2, 0, 100);
     return ok('Клиент был честным. Ушёл с отзывом 👎', { kind: 'wrong' });
+  }
+
+  // Таймер ордера истёк: клиент уходит, репутация слегка падает.
+  function cancelOrder(s, id) {
+    const o = s.orders.find(x => x.id === id);
+    if (!o) return fail('Ордер уже закрыт');
+    s.orders = s.orders.filter(x => x !== o);
+    if (!o.fraud) s.rep = clamp(s.rep - 1, 0, 100);
+    return ok(`Ордер #${o.id} отменён по таймеру`, { kind: 'wrong' });
   }
 
   function fraudText(f) {
@@ -390,7 +402,7 @@
     s.team.push(id);
     s.trust[id] = clamp(s.trust[id] + 5, 0, 100);
     if (id === 'danya') s.energy += 20;
-    s.chat.push({ from: id, text: hireLine(id) });
+    s.chat.push({ from: id, text: hireLine(id), th: id });
     checkChapter(s);
     return ok(`${c.avatar} ${c.name} в команде`, { kind: 'buy' });
   }
@@ -430,12 +442,13 @@
     const ev = evById(id);
     const d = ev.init ? ev.init(s, () => rnd(s)) : {};
     const pre = typeof ev.pre === 'function' ? ev.pre(s, d) : ev.pre;
-    for (const m of pre) s.chat.push({ from: m.from, text: m.text });
-    s.pending.push({ key: s.nextId++, id, d, from: ev.from });
+    const th = ev.th || ev.from;
+    for (const m of pre) s.chat.push({ from: m.from, text: m.text, th: m.th || th });
+    s.pending.push({ key: s.nextId++, id, d, from: ev.from, th });
     s.doneEvents[id] = (s.doneEvents[id] || 0) + 1;
     trimChat(s);
   }
-  function trimChat(s) { if (s.chat.length > 150) s.chat.splice(0, s.chat.length - 150); }
+  function trimChat(s) { if (s.chat.length > 400) s.chat.splice(0, s.chat.length - 400); }
 
   function eventOptions(s, inst) {
     const ev = evById(inst.id);
@@ -449,11 +462,11 @@
     const opt = ev.options[idx];
     if (!opt) return fail('Нет такого варианта');
     s.pending = s.pending.filter(p => p !== inst);
-    s.chat.push({ from: 'hero', text: opt.text.replace(/^[^\p{L}\d]+/u, '') });
+    s.chat.push({ from: 'hero', text: opt.text.replace(/^[^\p{L}\d]+/u, ''), th: inst.th });
     const eff = typeof opt.eff === 'function' ? opt.eff(s, inst.d) : opt.eff;
-    const res = applyEffects(s, eff || {}, inst.from);
+    const res = applyEffects(s, eff || {}, inst.from, inst.th);
     settle(s);
-    if (opt.say) say(s, inst.from, opt.say);
+    if (opt.say) say(s, inst.from, opt.say, inst.th);
     if (s.flags.tutorial && !s.flags.tutorialDone) {
       s.flags.tutorialDone = true;
       s.orders.unshift(tutorialOrder(s));
@@ -464,12 +477,12 @@
     return ok(res.msg || '', res.fx || {});
   }
 
-  function applyEffects(s, e, from) {
+  function applyEffects(s, e, from, th) {
     const out = { msg: '', fx: {} };
     const nw = netWorth(s);
     if (e.chance) {
       const branch = rnd(s) < e.chance.p ? e.chance.win : e.chance.lose;
-      const r = applyEffects(s, branch, from);
+      const r = applyEffects(s, branch, from, th);
       out.fx = r.fx;
     }
     if (e.nwPct) {
@@ -495,22 +508,22 @@
       const pen = hired(s, 'grisha') ? 1 : 1.2;
       const due = r2(s.taxDebt * pen);
       s.rub -= due; s.taxPaid += due + s.taxReserve; s.taxReserve = 0; s.taxDebt = 0;
-      if (due > 0) { s.chat.push({ from: 'grisha', text: `Списано ${fmt(due)} ₽${pen > 1 ? ' (с пенями и штрафом)' : ''}. Теперь чисто.` }); s.stats.lost += due * (pen - 1); }
-      else s.chat.push({ from: 'grisha', text: 'Резерв ушёл в бюджет. Долгов нет 👌' });
+      if (due > 0) { s.chat.push({ from: 'grisha', text: `Списано ${fmt(due)} ₽${pen > 1 ? ' (с пенями и штрафом)' : ''}. Теперь чисто.`, th: 'grisha' }); s.stats.lost += due * (pen - 1); }
+      else s.chat.push({ from: 'grisha', text: 'Резерв ушёл в бюджет. Долгов нет 👌', th: 'grisha' });
     }
-    if (e.say) say(s, from, e.say);
+    if (e.say) say(s, from, e.say, th);
     if (e.ending) finish(s, e.ending);
     return out;
   }
 
   // «Гриша: текст» — реплика от Гриши, а не от автора события.
-  function say(s, from, text) {
+  function say(s, from, text, th) {
     const m = /^([А-ЯЁ][а-яё]+): (.+)$/su.exec(text);
     if (m) {
       const id = Object.keys(D.characters).find(k => D.characters[k].name.split(' ')[0] === m[1]);
-      if (id) { s.chat.push({ from: id, text: m[2] }); return; }
+      if (id) { s.chat.push({ from: id, text: m[2], th: th || id }); return; }
     }
-    s.chat.push({ from, text });
+    s.chat.push({ from, text, th: th || from });
   }
 
   function rollMorningEvents(s) {
@@ -596,11 +609,11 @@
       if (s.risk >= 88) {
         s.frozen = g ? 3 : 6; s.rep = clamp(s.rep - 8, 0, 100); s.stress = clamp(s.stress + 25, 0, 100); s.risk = 60;
         rep.lines.push({ bad: true, text: `⛔ Банк ограничил ДБО по 115-ФЗ. Счета заморожены на ${s.frozen} дн.` });
-        s.chat.push({ from: 'bank', text: 'Операции ограничены. Выявлены признаки транзитных операций. Обратитесь в отделение с документами.' });
+        s.chat.push({ from: 'bank', text: 'Операции ограничены. Выявлены признаки транзитных операций. Обратитесь в отделение с документами.', th: 'sms' });
       } else if (s.risk >= 70) {
         s.frozen = g ? 1 : 4; s.stress = clamp(s.stress + 12, 0, 100); s.risk -= 15;
         rep.lines.push({ bad: true, text: `📄 Банк запросил документы. Операции приостановлены на ${s.frozen} дн.${g ? ' Гриша ускорил проверку.' : ''}` });
-        s.chat.push({ from: 'bank', text: 'Просим предоставить документы, подтверждающие экономический смысл операций.' });
+        s.chat.push({ from: 'bank', text: 'Просим предоставить документы, подтверждающие экономический смысл операций.', th: 'sms' });
       } else if (s.risk >= 48 && rnd(s) < 0.25) {
         s.frozen = 1;
         rep.lines.push({ bad: true, text: '🧊 Антифрод: охлаждение счёта на 24 часа.' });
@@ -641,7 +654,7 @@
   function ok(msg, fx) { return { ok: true, msg, fx: fx || {} }; }
   function fail(msg) { return { ok: false, msg }; }
 
-  const ACTIONS = { accept: (s, a) => acceptOrder(s, a.id), dispute: (s, a) => disputeOrder(s, a.id), hustle: (s, a) => doHustle(s, a.id),
+  const ACTIONS = { accept: (s, a) => acceptOrder(s, a.id), cancel: (s, a) => cancelOrder(s, a.id), dispute: (s, a) => disputeOrder(s, a.id), hustle: (s, a) => doHustle(s, a.id),
     buy: (s, a) => buyUpgrade(s, a.id), hire: (s, a) => hire(s, a.id), choose: (s, a) => choose(s, a.key, a.idx),
     endDay: s => endDay(s), retail: s => retail(s), tax: s => toggleTax(s), ack: s => ack(s) };
 
