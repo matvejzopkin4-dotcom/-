@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0a0e14">
+  <title>P2P: С нуля</title>
+  <meta name="description" content="Сюжетный симулятор P2P-мерчанта: от 3 700 ₽ в Новозаровске до своего бизнеса в Москве.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💸</text></svg>">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" hidden>
+    <header class="top">
+      <div class="brand"><span class="logo">P2P</span><span class="brand-sub">С НУЛЯ</span></div>
+      <div class="where" id="where"></div>
+      <div class="top-btns">
+        <button class="icon-btn" id="btn-sound" title="Звук">🔊</button>
+        <button class="icon-btn" id="btn-menu" title="Меню">☰</button>
+      </div>
+    </header>
+
+    <section class="stats" id="stats"></section>
+    <section class="goal" id="goal"></section>
+
+    <nav class="mtabs">
+      <button data-tab="board" class="active">📈 Стакан</button>
+      <button data-tab="chat">💬 TG-Hub <span class="dot" id="chat-dot" hidden></span></button>
+    </nav>
+
+    <main class="main">
+      <section class="panel board" id="board"></section>
+      <section class="panel chat" id="chat">
+        <div class="panel-head"><span>💬 TG-Hub</span><span class="muted" id="chat-sub"></span></div>
+        <div class="chat-feed" id="chat-feed"></div>
+        <div class="chat-options" id="chat-options"></div>
+      </section>
+    </main>
+
+    <footer class="actions" id="actions">
+      <button class="act" data-open="shop">🛒<span>Апгрейды</span></button>
+      <button class="act" data-open="team">👥<span>Команда</span></button>
+      <button class="act" data-open="books">📊<span>Учёт</span></button>
+      <button class="act" id="btn-retail" title="Обычные покупки по карте снижают банк-риск">🛍️<span>Покупки</span></button>
+      <button class="act primary" id="btn-day">🌙<span>Завершить день</span></button>
+    </footer>
+  </div>
+
+  <div id="title" class="title-screen">
+    <div class="title-card">
+      <div class="title-badge">RU · 2026</div>
+      <h1>P2P: <em>С НУЛЯ</em></h1>
+      <p class="title-lead">Тебе 20. Девушка ушла к парню на BMW. На карте — <b>3 700 ₽</b>.<br>Стань мерчантом, научись отличать оборот от прибыли и не попасться мошенникам.</p>
+      <div class="title-btns">
+        <button class="big-btn" id="btn-continue" hidden>▶ Продолжить</button>
+        <button class="big-btn" id="btn-new">✦ Новая игра</button>
+      </div>
+      <ul class="title-how">
+        <li>📦 Подрабатывай, чтобы собрать стартовые 10&nbsp;000&nbsp;₽</li>
+        <li>🔍 Проверяй каждый ордер: ФИО, сумма, деньги в банке</li>
+        <li>🏦 Следи за банк-риском — 115-ФЗ не дремлет</li>
+        <li>👥 Собери команду и выбери один из 4 финалов</li>
+      </ul>
+      <p class="title-note">Все персонажи вымышлены. Чужие карты, дропперство и обход банковского контроля в игре ведут к блокировкам — как и в жизни.</p>
+    </div>
+  </div>
+
+  <div id="modal" class="modal" hidden><div class="modal-card" id="modal-card"></div></div>
+  <div id="toasts" class="toasts"></div>
+  <div id="fx" class="fx-layer"></div>
+
+  <script src="data.js"></script>
+  <script src="engine.js"></script>
+  <script src="ui.js"></script>
+</body>
+</html>
