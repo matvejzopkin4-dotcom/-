@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0B0E14">
+  <title>P2P: С НУЛЯ (RU Market Edition 2026–2027)</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <div class="app-shell" id="app" aria-busy="true">
+    <!-- Верхняя шапка -->
+    <header class="masthead">
+      <a class="brand" href="#main">
+        <span>RU 2026</span> P2P: С НУЛЯ
+      </a>
+      <div class="masthead-right">
+        <button class="button" id="advanceDay" type="button" title="Завершить день, восстановить энергию (100) и списать расходы на имущество">
+          🌙 Следующий день
+        </button>
+        <button class="button button-quiet" id="newGame" type="button">
+          🔄 Новая игра
+        </button>
+      </div>
+    </header>
+
+    <!-- Верхний информационный терминал (HUD) -->
+    <section class="hud" aria-label="Финансовые и операционные метрики">
+      <div class="hud-item">
+        <span class="hud-label">Свободно на счетах</span>
+        <strong class="hud-val balance" id="rub">— ₽</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Крипто-активы</span>
+        <strong class="hud-val positive" id="usdt">— USDT</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Чистая прибыль (PnL)</span>
+        <strong class="hud-val" id="pnl">— ₽</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label" id="day">День 1</span>
+        <strong class="hud-val" id="energy">100 / 100</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Локация</span>
+        <strong class="hud-val" id="city">Новозаровск</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Стресс / Выгорание</span>
+        <strong class="hud-val" id="stressMeter">0%</strong>
+      </div>
+      <div class="hud-item">
+        <span class="hud-label">Внимательность</span>
+        <strong class="hud-val" id="focusMeter">50%</strong>
+      </div>
+    </section>
+
+    <!-- Баннеры статуса и ошибок -->
+    <div class="error-banner" id="errorBanner" role="alert" hidden>
+      <span id="errorText"></span>
+      <button class="button button-quiet" id="retry" type="button">Обновить</button>
+    </div>
+    <div class="request-status" id="requestStatus" role="status">Инициализация финансового терминала…</div>
+
+    <!-- Навигационные вкладки терминала (12 разделов GDD) -->
+    <nav class="terminal-nav" aria-label="Разделы терминала">
+      <button class="nav-tab active" data-tab="tab-story" type="button">📖 Сюжет <span class="badge" id="chapterBadge">Гл. 1</span></button>
+      <button class="nav-tab" data-tab="tab-orderbook" type="button">📈 P2P-стакан</button>
+      <button class="nav-tab" data-tab="tab-tghub" type="button">💬 TG-Hub <span class="badge" id="tgBadge">3</span></button>
+      <button class="nav-tab" data-tab="tab-inspector" type="button">🛡️ Инспектор ордеров <span class="badge warning-val">115-ФЗ</span></button>
+      <button class="nav-tab" data-tab="tab-banks" type="button">🏦 Банки & Лимиты</button>
+      <button class="nav-tab" data-tab="tab-team" type="button">👥 Команда (RPG)</button>
+      <button class="nav-tab" data-tab="tab-arbitrage" type="button">🔄 Арбитраж-сканер</button>
+      <button class="nav-tab" data-tab="tab-hustles" type="button">🔨 Подработки</button>
+      <button class="nav-tab" data-tab="tab-taxes" type="button">💼 Бизнес & Налоги</button>
+      <button class="nav-tab" data-tab="tab-inventory" type="button">🏢 Имущество</button>
+      <button class="nav-tab" data-tab="tab-log" type="button">📜 Журнал событий</button>
+    </nav>
+
+    <!-- Основное рабочее пространство (Контейнер табов) -->
+    <main id="main" class="terminal-layout">
+
+      <!-- ВКЛАДКА 1: СЮЖЕТ И ГЛАВЫ -->
+      <section class="tab-pane active" id="tab-story">
+        <div class="story-panel">
+          <div class="story-chapter-badge">
+            <span id="chapter">Глава 1</span> • <span id="storyState">Ваш следующий шаг</span>
+          </div>
+          <h1 class="story-h1" id="storyTitle">Новозаровск: старт с нуля</h1>
+          <p class="story-text" id="storyText">Загрузка сюжета…</p>
+
+          <div class="objective-box">
+            <span class="hud-label">Текущая цель главы</span>
+            <h2 id="objective" style="font-size: 16px; margin: 4px 0 8px;">—</h2>
+            <div style="display: flex; justify-content: space-between; font-size: 12px; color: var(--muted);">
+              <span>Прогресс выполнения:</span>
+              <span id="progressText">—</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <progress id="goalProgress" value="0" max="3" aria-label="Прогресс цели"></progress>
+            </div>
+          </div>
+
+          <div class="story-choices" id="choices" aria-label="Варианты решений"></div>
+          <p class="completion" id="completion" hidden style="margin-top: 16px; color: var(--accent); font-weight: 600;">
+            ✓ Эпизод завершён. Решения сохранены. Вы можете продолжать торговлю, подработки или перейти к следующей цели.
+          </p>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 2: P2P-СТАКАН И ОРДЕРА -->
+      <section class="tab-pane" id="tab-orderbook" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title" id="tradeTitle">📈 Биржевой P2P-стакан котировок</h2>
+            <div style="display: flex; gap: 8px;">
+              <select id="exchangeSelect" style="width: auto;">
+                <option value="bybit">Bybit (Комиссия 0%)</option>
+                <option value="rapira">Rapira (Локальный опт)</option>
+                <option value="abcex">ABCEX (Регионы)</option>
+                <option value="bingx">BingX / HTX</option>
+                <option value="okx">OKX / Gate</option>
+                <option value="aifory">Aifory Pro (B2B)</option>
+              </select>
+              <select id="bankSelect" style="width: auto;">
+                <option value="tbank">Т-Банк (СБП 0.5%)</option>
+                <option value="sber">Сбербанк (СБП 1.0%)</option>
+                <option value="alfa">Альфа-Банк (СБП 0.8%)</option>
+                <option value="vtb">ВТБ (СБП 1.5%)</option>
+                <option value="gazprom">Газпромбанк</option>
+                <option value="sovcom">Совкомбанк</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 2fr 1.2fr; gap: 20px;">
+            <div>
+              <div class="orderbook-grid">
+                <div>
+                  <h3 style="color: var(--accent); font-size: 13px; margin: 0 0 8px;">Покупка USDT (Bids / Закупка)</h3>
+                  <table class="order-table">
+                    <thead><tr><th>Мерчант</th><th>Курс</th><th>Лимит</th><th>Банк</th><th></th></tr></thead>
+                    <tbody id="bidsTable">
+                      <tr><td>Sanya_King</td><td class="positive" id="buyRate">91.00 ₽</td><td>100–500k</td><td>Т-Банк</td><td><button class="button-quiet" style="padding:2px 8px; font-size:11px;" onclick="prefillDeal('buy', 30, 91.0)">Купить</button></td></tr>
+                      <tr><td>Vityaz_P2P</td><td class="positive">91.15 ₽</td><td>50–200k</td><td>Сбер</td><td><button class="button-quiet" style="padding:2px 8px; font-size:11px;" onclick="prefillDeal('buy', 50, 91.15)">Купить</button></td></tr>
+                      <tr><td>KMI_Liquidity</td><td class="positive">91.25 ₽</td><td>200–2M</td><td>Альфа</td><td><button class="button-quiet" style="padding:2px 8px; font-size:11px;" onclick="prefillDeal('buy', 100, 91.25)">Купить</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+                <div>
+                  <h3 style="color: var(--danger); font-size: 13px; margin: 0 0 8px;">Продажа USDT (Asks / Сбыт)</h3>
+                  <table class="order-table">
+                    <thead><tr><th>Мерчант</th><th>Курс</th><th>Лимит</th><th>Банк</th><th></th></tr></thead>
+                    <tbody id="asksTable">
+                      <tr><td>Max_Zero</td><td class="negative" id="sellRate">92.00 ₽</td><td>10–50k</td><td>Т-Банк</td><td><button class="button-quiet" style="padding:2px 8px; font-size:11px;" onclick="prefillDeal('sell', 30, 92.0)">Продать</button></td></tr>
+                      <tr><td>Ural_Capital</td><td class="negative">92.10 ₽</td><td>100–800k</td><td>Сбер</td><td><button class="button-quiet" style="padding:2px 8px; font-size:11px;" onclick="prefillDeal('sell', 50, 92.10)">Продать</button></td></tr>
+                      <tr><td>Rolex_VIP</td><td class="negative">92.35 ₽</td><td>500k–3M</td><td>Альфа</td><td><button class="button-quiet" style="padding:2px 8px; font-size:11px;" onclick="prefillDeal('sell', 100, 92.35)">Продать</button></td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- Форма исполнения сделки -->
+            <div style="background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px;">
+              <h3 style="margin: 0 0 12px; font-size: 14px;">Панель исполнения ордера</h3>
+              <form id="dealForm" novalidate>
+                <div style="margin-bottom: 12px;">
+                  <label for="dealSide" style="font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px;">Направление</label>
+                  <select id="dealSide">
+                    <option value="buy">Купить USDT (Отдаю рубли)</option>
+                    <option value="sell">Продать USDT (Получаю рубли)</option>
+                  </select>
+                </div>
+                <div style="margin-bottom: 12px;">
+                  <label for="dealAmount" style="font-size: 12px; color: var(--muted); display: block; margin-bottom: 4px;">Количество USDT</label>
+                  <input id="dealAmount" type="text" inputmode="decimal" placeholder="30 или 100" aria-describedby="amountHelp amountError">
+                  <p class="field-help" id="amountHelp" style="font-size: 11px; color: var(--muted); margin: 4px 0 0;">Курс первого эпизода: 91.00 / 92.00 ₽. Сделка тратит 5 энергии.</p>
+                  <p class="field-error" id="amountError" hidden style="font-size: 11px; color: var(--danger); margin: 4px 0 0;"></p>
+                </div>
+                <button class="button button-primary" id="tradeSubmit" type="submit" style="width: 100%; margin-top: 8px;">
+                  Исполнить ордер
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 3: TG-HUB МЕССЕНДЖЕР -->
+      <section class="tab-pane" id="tab-tghub" hidden>
+        <div class="tg-container">
+          <!-- Левая колонка: список чатов -->
+          <div class="tg-sidebar">
+            <div style="padding: 12px 14px; font-weight: 700; font-size: 14px; border-bottom: 1px solid var(--line); display: flex; justify-content: space-between;">
+              <span>TG-Hub 2.0</span>
+              <span style="color: var(--accent); font-size: 12px;">Online</span>
+            </div>
+            <div class="tg-chat-item active" data-chat="chat_local">
+              <div class="tg-avatar">🥊</div>
+              <div class="tg-chat-info">
+                <div class="tg-chat-name">P2P Новозаровск</div>
+                <div class="tg-chat-last">Даня ММА: Брат, держи курс...</div>
+              </div>
+            </div>
+            <div class="tg-chat-item" data-chat="chat_sanya">
+              <div class="tg-avatar">⚡</div>
+              <div class="tg-chat-info">
+                <div class="tg-chat-name">Саня Лимит</div>
+                <div class="tg-chat-last">Вопрос по блокировке 115-ФЗ</div>
+              </div>
+            </div>
+            <div class="tg-chat-item" data-chat="chat_marat">
+              <div class="tg-avatar">🏛️</div>
+              <div class="tg-chat-info">
+                <div class="tg-chat-name">Марат KMI</div>
+                <div class="tg-chat-last">Кто реально работает в рынке?</div>
+              </div>
+            </div>
+            <div class="tg-chat-item" data-chat="chat_team">
+              <div class="tg-avatar">🛡️</div>
+              <div class="tg-chat-info">
+                <div class="tg-chat-name">Команда (Синдикат)</div>
+                <div class="tg-chat-last">Иван Ролекс: Есть маза на заём...</div>
+              </div>
+            </div>
+            <div class="tg-chat-item" data-chat="chat_grisha">
+              <div class="tg-avatar">📑</div>
+              <div class="tg-chat-info">
+                <div class="tg-chat-name">Гриша Бухгалтер</div>
+                <div class="tg-chat-last">Отчёт КУДиР готов</div>
+              </div>
+            </div>
+            <div class="tg-chat-item" data-chat="chat_max">
+              <div class="tg-avatar">🎯</div>
+              <div class="tg-chat-info">
+                <div class="tg-chat-name">Макс Ноль</div>
+                <div class="tg-chat-last">Я твой спред в ноль высушу</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Правая колонка: диалог -->
+          <div class="tg-main">
+            <div class="tg-header">
+              <div>
+                <h3 id="chatTitle" style="margin: 0; font-size: 15px;">P2P Новозаровск</h3>
+                <span style="font-size: 11px; color: var(--muted);" id="chatSubtitle">чат сообщества трейдеров</span>
+              </div>
+              <span style="font-size: 12px; color: var(--accent);">Шифрование MTProto</span>
+            </div>
+            <div class="tg-history" id="messages">
+              <p class="empty" style="color: var(--muted);">Сообщения загружаются…</p>
+            </div>
+            <div style="padding: 12px 16px; border-top: 1px solid var(--line); display: flex; gap: 8px;" id="chatReplyArea">
+              <span style="font-size: 12px; color: var(--muted);">Выберите вариант ответа в сообщении выше или используйте кнопки диалога.</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 4: ИНСПЕКТОР ОРДЕРОВ И АНТИФРОД -->
+      <section class="tab-pane" id="tab-inspector" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title">🛡️ Инспектор ордера: комплаенс & проверка 115/161-ФЗ</h2>
+            <span class="badge" style="background: var(--info); color: #fff;">Anti-Fraud Engine 6.4</span>
+          </div>
+
+          <p style="color: var(--muted); font-size: 13px; margin-bottom: 16px;">
+            Внимание! При приёме перевода от третьего лица («грязный треугольник») ваши реквизиты попадают в базу ЦБ РФ по 161-ФЗ с блокировкой всех счетов. Обязательно сверяйте ФИО отправителя!
+          </p>
+
+          <div class="inspector-card" id="inspectorBox">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 10px;">
+              <div>
+                <strong style="font-size: 16px;" id="orderId">ORD-84192</strong>
+                <span style="color: var(--muted); margin-left: 8px;">Ордер на продажу USDT</span>
+              </div>
+              <span class="badge" id="orderStatusBadge" style="background: var(--warning); color: #000;">Ожидает проверки</span>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin: 16px 0;">
+              <div>
+                <span class="hud-label">Покупатель на бирже (Профиль)</span>
+                <strong style="font-size: 15px;" id="buyerExchangeName">Алексей Смирнов</strong>
+                <div style="font-size: 12px; color: var(--muted); margin-top: 4px;">Сумма сделки: <span class="positive" id="orderVolume">30 USDT (2 760.00 ₽)</span></div>
+              </div>
+              <div>
+                <span class="hud-label">Симулированное уведомление онлайн-банка</span>
+                <div class="push-notification">
+                  <span>🔔</span>
+                  <div>
+                    <div style="font-weight: 600;" id="bankPushSender">Перевод +2 760.00 ₽ от Алексей С.</div>
+                    <div style="font-size: 11px; color: var(--muted);">СБП Т-Банк • Только что</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div class="receipt-preview">
+              <div>📄 Электронная квитанция (PDF-чек):</div>
+              <div id="receiptMetadata" style="color: var(--muted); margin-top: 4px;">Метаданные: PDF v1.4, Генератор: Т-Банк Сертифицированный шлюз, Hash SHA256: 8a4f...ec91</div>
+            </div>
+
+            <div style="display: flex; gap: 12px; margin-top: 16px;">
+              <button class="button button-primary" id="btnConfirmOrder" type="button">
+                ✓ ФИО совпадает, отпустить USDT
+              </button>
+              <button class="button button-danger" id="btnAppealOrder" type="button">
+                ⚠️ Отклонить / Открыть апелляцию (Подозрение на 161-ФЗ / Чек)
+              </button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 5: БАНКИ И ЛИМИТЫ -->
+      <section class="tab-pane" id="tab-banks" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title">🏦 Банковские счета и комплаенс-скоринг (Risk Score)</h2>
+            <span style="font-size: 12px; color: var(--muted);">Лимит СБП себе: 30 млн ₽ / третьим лицам: 100k ₽</span>
+          </div>
+
+          <div class="bank-cards-grid" id="banksContainer">
+            <!-- Динамические карточки банков -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 6: КОМАНДА (RPG) -->
+      <section class="tab-pane" id="tab-team" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title">👥 Синдикат: Команда и распределение ролей</h2>
+            <span style="font-size: 12px; color: var(--muted);">Доверие партнёров влияет на исход Главы 8</span>
+          </div>
+
+          <div class="team-grid" id="teamContainer">
+            <!-- Динамические карточки команды -->
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 7: АРБИТРАЖ-СКАНЕР -->
+      <section class="tab-pane" id="tab-arbitrage" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title">🔄 Межбиржевой и треугольный арбитраж</h2>
+            <span class="badge" style="background: var(--accent); color: #000;">Unit Economics Engine</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div style="background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px;">
+              <h3 style="margin: 0 0 10px; font-size: 14px; color: var(--accent);">Межбиржевой спред (Bybit → Rapira)</h3>
+              <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">Покупка на Bybit по 91.00 ₽ (мейкер 0%), перевод и продажа на Rapira по 91.75 ₽.</p>
+              <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+                <div>Курс покупки: <strong>91.00 ₽</strong></div>
+                <div>Курс продажи: <strong>91.75 ₽</strong></div>
+                <div>Валовый спред: <span class="positive">+0.82%</span></div>
+                <div>Чистая прибыль с 100 000 ₽: <strong class="positive">+713.50 ₽</strong> (после комиссий и СБП)</div>
+              </div>
+              <button class="button button-primary" style="margin-top: 14px; width: 100%;" onclick="runArbitrage('interexchange')">
+                Исполнить межбиржевую связку
+              </button>
+            </div>
+
+            <div style="background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px;">
+              <h3 style="margin: 0 0 10px; font-size: 14px; color: var(--info);">Треугольный арбитраж (RUB → USDT → TON → RUB)</h3>
+              <p style="font-size: 12px; color: var(--muted); margin-bottom: 12px;">P2P покупка USDT → Спот покупка TON (проскальзывание 0.05%) → P2P продажа TON за рубли.</p>
+              <div style="font-family: monospace; font-size: 13px; line-height: 1.6;">
+                <div>Спотовая пара TON/USDT: <strong>$5.42</strong></div>
+                <div>Сетевой газ TRC-20/TON: <strong>0.50 USDT</strong></div>
+                <div>Эффективный чистый спред: <span class="positive">+1.15%</span></div>
+                <div>Чистая прибыль с 100 000 ₽: <strong class="positive">+1 000.50 ₽</strong></div>
+              </div>
+              <button class="button button-primary" style="margin-top: 14px; width: 100%;" onclick="runArbitrage('triangular')">
+                Исполнить треугольный цикл
+              </button>
+            </div>
+          </div>
+
+          <!-- OTC-доска -->
+          <div style="margin-top: 24px; border-top: 1px solid var(--line); padding-top: 16px;">
+            <h3 style="margin: 0 0 12px; font-size: 15px;">🤝 OTC-доска объявлений (Внебиржевые пулы)</h3>
+            <div id="otcContainer" style="display: grid; gap: 12px;"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 8: ПОДРАБОТКИ (ГЛАВА 1) -->
+      <section class="tab-pane" id="tab-hustles" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title">🔨 Провинциальные подработки (Старт с 3 700 ₽)</h2>
+            <span style="font-size: 12px; color: var(--muted);">Цель Главы 1: накопить 10 000 ₽ для входа в рынок</span>
+          </div>
+          <div class="hustle-grid" id="hustlesContainer"></div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 9: БИЗНЕС И НАЛОГИ -->
+      <section class="tab-pane" id="tab-taxes" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title">💼 Бизнес-структура, ИП и налоги (Гриша Бухгалтер)</h2>
+            <span class="badge" style="background: var(--accent); color: #000;">ФЗ № 259-ФЗ & НК РФ</span>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <div>
+              <h3 style="font-size: 14px; margin: 0 0 8px;">Правовой статус</h3>
+              <div style="font-size: 13px; line-height: 1.8;">
+                <div>Текущий статус: <strong id="ipStatus">Физлицо (НДФЛ 13%)</strong></div>
+                <div>Режим налога: <strong id="taxModeLabel">НДФЛ 13% с чистой прибыли</strong></div>
+                <div>Налоговый резерв в кубышке: <strong class="warning-val" id="taxReserve">0.00 ₽</strong></div>
+                <div>Оборот за месяц: <strong id="turnoverMonth">0.00 ₽</strong></div>
+              </div>
+              <p style="font-size: 12px; color: var(--muted); margin-top: 12px;">
+                По закону 422-ФЗ самозанятость (НПД) не применяется для перепродажи цифровых валют. В Главе 7 регистрируется ИП (УСН «доходы минус расходы» 15%).
+              </p>
+            </div>
+            <div>
+              <h3 style="font-size: 14px; margin: 0 0 8px;">КУДиР (Книга учёта доходов и расходов)</h3>
+              <div style="background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 12px; font-family: monospace; font-size: 11px; max-height: 140px; overflow-y: auto;">
+                <div>[РЕЕСТР ДОГОВОРОВ И ОРДЕРОВ]</div>
+                <div>Все ордера Bybit/Rapira сопоставлены с выписками Т-Банка.</div>
+                <div>Подтверждённые расходы учтены. Риск доначисления ФНС: 0%.</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 10: ИМУЩЕСТВО (INVENTORY) -->
+      <section class="tab-pane" id="tab-inventory" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title" id="inventoryTitle">🏢 Имущество, техника и Lifestyle (Burn Rate)</h2>
+            <span style="font-size: 12px; color: var(--muted);">Покупки списывают содержание ежедневно</span>
+          </div>
+          <div id="items"><p class="empty" style="color: var(--muted);">Загружаем предметы…</p></div>
+        </div>
+      </section>
+
+      <!-- ВКЛАДКА 11: ЖУРНАЛ СОБЫТИЙ -->
+      <section class="tab-pane" id="tab-log" hidden>
+        <div class="terminal-card">
+          <div class="card-header">
+            <h2 class="card-title" id="logTitle">📜 Журнал операций и решений</h2>
+            <span style="font-size: 12px; color: var(--muted);">Хронология истории Артёма Воронова</span>
+          </div>
+          <ol class="log-list" id="log"><li class="empty">Событий пока нет.</li></ol>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Всплывающий тост для уведомлений -->
+    <div class="toast-notice" id="toastNotice"></div>
+  </div>
+</body>
+</html>
